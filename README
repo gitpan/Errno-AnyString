@@ -1,0 +1,59 @@
+  use Errno qw/ENOENT/;
+  use [% Package %];
+
+  $! = "--my hovercraft is full of eels";
+  my $s = "$!"; # $s now contains "my hovercraft is full of eels"
+
+  open my $fh, "<", "/no/such/file";
+  $s = "$!"; # $s now contains "no such file or directory"
+
+  $! = "--the bells the bells";
+  my $s = "$!"; # $s now contains "the bells the bells"
+
+  my $saved_errno = $!;
+   
+  $! = ENOENT;
+  $s = "$!"; # $s now contains "no such file or directory"
+
+  $! = $saved_errno;
+  $s = "$!"; # $s now contains "the bells the bells"
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Build.PL
+	./Build
+	./Build test
+	./Build install
+
+SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc Errno::AnyString
+
+You can also look for information at:
+
+    RT, CPAN's request tracker
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Errno::AnyString
+
+    AnnoCPAN, Annotated CPAN documentation
+        http://annocpan.org/dist/Errno::AnyString
+
+    CPAN Ratings
+        http://cpanratings.perl.org/d/Errno::AnyString
+
+    Search CPAN
+        http://search.cpan.org/dist/Errno::AnyString
+
+
+COPYRIGHT AND LICENCE
+
+Copyright 2009 Dave Taylor, all rights reserved.
+
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+

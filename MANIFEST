@@ -1,0 +1,15 @@
+Build.PL
+Changes
+lib/Errno/AnyString.pm
+lib/Errno/AnyString.xs
+lib/in-pm-files.t.PL
+MANIFEST			This list of files
+README
+t/basic.t
+t/compat.t
+t/Foo1.pm
+t/Foo2.pm
+t/Foo3.pm
+t/Foo4.pm
+Makefile.PL
+META.yml
