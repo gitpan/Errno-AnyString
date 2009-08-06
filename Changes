@@ -1,5 +1,8 @@
 Revision history for Errno::AnyString
 
+0.03    2009-08-06
+        A better interface for setting the custom error string, not backwards compatible.
+
 0.02    2009-08-06
         Building with Makefile.PL was broken, fixed.
         More tests.

@@ -8,33 +8,30 @@ Errno::AnyString - put arbitrary strings in $!
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
-  use Errno qw/ENOENT/;
-  use Errno::AnyString;
+  use Errno qw/EIO/;
+  use Errno::AnyString qw/custom_errstr/;
 
-  $! = "--my hovercraft is full of eels";
-  my $s = "$!"; # $s now contains "my hovercraft is full of eels"
-
-  open my $fh, "<", "/no/such/file";
-  $s = "$!"; # $s now contains "no such file or directory"
-
-  $! = "--the bells the bells";
-  my $s = "$!"; # $s now contains "the bells the bells"
+  $! = custom_errstr "My hovercraft is full of eels";
+  print "$!\n"; # prints My hovercraft is full of eels
 
   my $saved_errno = $!;
-   
-  $! = ENOENT;
-  $s = "$!"; # $s now contains "no such file or directory"
+
+  open my $fh, "<", "/no/such/file";
+  print "$!\n"; # prints No such file or directory
+
+  $! = EIO;
+  print "$!\n"; # prints Input/output error
 
   $! = $saved_errno;
-  $s = "$!"; # $s now contains "the bells the bells"
+  print "$!\n"; # prints My hovercraft is full of eels
 
 
 =head1 DESCRIPTION
@@ -43,11 +40,15 @@ C<Errno::AnyString> allows you to place an arbitrary error message in the specia
 
 It is useful if you are writing code that reports errors by setting C<$!>, and none of the standard system error messages fit.
 
-If C<Errno::AnyString> is loaded, C<$!> behaves as normal unless a custom error string has been set by assigning a string starting with C<--> to C<$!>. If a custom error string is set, it will be returned when C<$!> is evaluated as a string, and 458513437 will be returned when C<$!> is evaluated as a number, see C<ERRSTR_SET> below.
+If C<Errno::AnyString> is loaded, C<$!> behaves as normal unless a custom error string has been set with C<custom_errstr>. If a custom error string is set, it will be returned when C<$!> is evaluated as a string, and 458513437 will be returned when C<$!> is evaluated as a number, see C<ERRSTR_SET> below.
 
 =head1 EXPORTS
 
 Nothing is exported by default. The following are available for export.
+
+=head2 custom_errstr ( ERROR_STRING )
+
+Returns a value which will set the custom error string when assigned to C<$!>
 
 =head2 ERRSTR_SET
 
@@ -63,12 +64,12 @@ require XSLoader;
 XSLoader::load('Errno::AnyString', $VERSION);
 
 our @ISA = qw/Exporter/;
-our @EXPORT_OK = qw/ERRSTR_SET/;
+our @EXPORT_OK = qw/custom_errstr ERRSTR_SET/;
 
 # A value for errno that nothing else is likely to set.
 sub ERRSTR_SET() { 458513437; }
 
-our ($Errno, $init_done);
+our ($Errno, $init_done, $dont_restore_magic_at_untie);
 unless ($init_done) {
     # Make a new variable with $! magic
     $Errno = 1;
@@ -79,6 +80,10 @@ unless ($init_done) {
     tie $!, __PACKAGE__;
 
     $init_done = 1;
+}
+
+sub custom_errstr ($) {
+    return dualvar ERRSTR_SET, $_[0];
 }
 
 sub TIESCALAR {
@@ -103,26 +108,25 @@ sub STORE {
     my $numval;
     { no warnings ; $numval = 0 + $_[0] };
     if ($numval == ERRSTR_SET) {
-        # Restoring a saved errno, and a custom string was set when it
-        # was saved. The string should still be in the pv slot of the sv
-        # used to save the errno.
-        my $str = "$_[0]";
-        if ($str eq ERRSTR_SET) {
-            $str = "Errno::AnyString failed to restore a saved errno value";
-        }
-        $self->{StrVal} = $str;
-        $Errno = ERRSTR_SET;
-    } elsif ($_[0] =~ /^--/) {
-        $self->{StrVal} = substr $_[0], 2;
+        # Either the dualvar return value of custom_errstr(), or a previously
+        # saved $! value with a custom error string in its pv slot. In either
+        # case, the string value holds the custom error string.
+        $self->{StrVal} = "$_[0]";
         $Errno = ERRSTR_SET;
     } else {
+        # A regular $!=EIO type store.
         delete $self->{StrVal};
         $Errno = $_[0];
     }
 }
 
 sub UNTIE {
-    # Put the $! magic back, rather than leave it as an untied non-magical scalar.
+    # Put the $! magic back, rather than leave it as an untied non-magical
+    # scalar.
+
+    # But whoever unties it doesn't want that, let's not.
+    return if $dont_restore_magic_at_untie;
+
     Errno::AnyString::_set_errno_magic($!);
 }
 

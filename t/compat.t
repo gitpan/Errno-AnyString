@@ -1,4 +1,4 @@
-# Errno::AnyString 0.02 t/compat.t
+# Errno::AnyString 0.03 t/compat.t
 # Test compatibility with traditional $! behavior
 
 use strict;
@@ -20,7 +20,7 @@ our $errno_ok_start_with_numeric;
 
 foreach my $testtype (qw/baseline compat compat2/) {
     if ($testtype eq 'compat') {
-        eval 'use Errno::AnyString'; die $@ if $@;
+        eval 'use Errno::AnyString qw/custom_errstr/'; die $@ if $@;
     }
     foreach my $reset_zero (0, 1) {
         foreach $errno_ok_start_with_numeric (0, 1) {
@@ -70,7 +70,7 @@ foreach my $testtype (qw/baseline compat compat2/) {
             }
             if ($testtype eq "compat") {
                 # custom error string
-                $! = "--my hovercraft is full of eels";
+                $! = custom_errstr("my hovercraft is full of eels");
                 errno_ok({
                     Errno    => 458513437,
                     Errstr   => "my hovercraft is full of eels",
