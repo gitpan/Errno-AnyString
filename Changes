@@ -1,5 +1,9 @@
 Revision history for Errno::AnyString
 
+0.02    2009-08-06
+        Building with Makefile.PL was broken, fixed.
+        More tests.
+
 0.01    2009-08-05
         Initial release.
 

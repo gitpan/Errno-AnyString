@@ -17,11 +17,12 @@ my $builder = Module::Build->new(
         'Errno'              => 0,
         'ExtUtils::CBuilder' => 0,
         'File::Slurp'        => 0,
+        'Module::Build'      => 0,
         'Test::More'         => 0,
         'Test::NoWarnings'   => 0,
     },
     add_to_cleanup      => [ 'Errno::AnyString-*' ],
-    create_makefile_pl => 'traditional',
+    create_makefile_pl => 'small',
 );
 
 $builder->create_build_script();

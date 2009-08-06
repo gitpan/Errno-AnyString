@@ -1,4 +1,4 @@
-# [ % Package %] 0.01 t/compat.t
+# Errno::AnyString 0.02 t/compat.t
 # Test compatibility with traditional $! behavior
 
 use strict;
@@ -13,7 +13,7 @@ our @system_errors = explore_system_errors();
 our $flathash_noneset = $system_errors[-1]{FlatHash};
 
 my $tests_per_errno_ok = 5 + @system_errors;
-my $errno_ok_calls = 2 * (3 * @system_errors * 3 + 1);
+my $errno_ok_calls = 2 * 2 * (3 * @system_errors * 7 + 1);
 plan tests => $errno_ok_calls * $tests_per_errno_ok + 1;
 
 our $errno_ok_start_with_numeric;
@@ -22,34 +22,62 @@ foreach my $testtype (qw/baseline compat compat2/) {
     if ($testtype eq 'compat') {
         eval 'use Errno::AnyString'; die $@ if $@;
     }
-    foreach $errno_ok_start_with_numeric (0, 1) {
-        foreach my $i (0 .. $#system_errors) {
-            my $sym = $system_errors[$i]{Symbol}; # Errno.pm symbolic code, such as ENOENT
-            my $name = $sym || $system_errors[$i]{Errno};
+    foreach my $reset_zero (0, 1) {
+        foreach $errno_ok_start_with_numeric (0, 1) {
+            foreach my $i (0 .. $#system_errors) {
+                my $sym = $system_errors[$i]{Symbol}; # Errno.pm symbolic code, such as ENOENT
+                my $name = $sym || $system_errors[$i]{Errno};
 
-            $system_errors[$i]{Setter}->();
-            errno_ok( $system_errors[$i], "$testtype setter $name" );
+                $system_errors[$i]{Setter}->();
+                errno_ok( $system_errors[$i], "$testtype setter $name" );
+                $! = 0 if $reset_zero;
 
-            $! = $system_errors[$i]{Errno};
-            errno_ok( $system_errors[$i], "$testtype set errno $name" );
+                my $errno = $system_errors[$i]{Errno};
+                $! = $errno;
+                errno_ok( $system_errors[$i], "$testtype set errno $name" );
+                $! = 0 if $reset_zero;
 
-            if ($sym) {
-                eval "\$! = $sym"; die $@ if $@;
-                errno_ok( $system_errors[$i], "$testtype set symbol $name" );
-            } else {
-                foreach my $j (1 .. $tests_per_errno_ok) {
-                    ok 1, "fake test to simplify test counting calculation";
+                # anything that perl groks as a number must be treated as such
+                $! = $errno."e0";
+                errno_ok( $system_errors[$i], "$testtype set errno $name exp" );
+                $! = 0 if $reset_zero;
+
+                $! = "$errno ";
+                errno_ok( $system_errors[$i], "$testtype set errno $name trailspace" );
+                $! = 0 if $reset_zero;
+
+                $! = "$errno.0000e00 ";
+                errno_ok( $system_errors[$i], "$testtype set errno $name xmas" );
+                $! = 0 if $reset_zero;
+
+                # even this silly thing must work. It warns, but sets $! to the number
+                { 
+                    no warnings;
+                    $! = "$errno things are currently on fire";
+                }
+                errno_ok( $system_errors[$i], "$testtype set errno $name silly" );
+                $! = 0 if $reset_zero;
+
+                if ($sym) {
+                    eval "\$! = $sym"; die $@ if $@;
+                    errno_ok( $system_errors[$i], "$testtype set symbol $name" );
+                    $! = 0 if $reset_zero;
+                } else {
+                    foreach my $j (1 .. $tests_per_errno_ok) {
+                        ok 1, "fake test to simplify test counting calculation";
+                    }
                 }
             }
-        }
-        if ($testtype eq "compat") {
-            # custom error string
-            $! = "--my hovercraft is full of eels";
-            errno_ok({
-                Errno    => 458513437,
-                Errstr   => "my hovercraft is full of eels",
-                FlatHash => $flathash_noneset,
-            }, "custom string set");
+            if ($testtype eq "compat") {
+                # custom error string
+                $! = "--my hovercraft is full of eels";
+                errno_ok({
+                    Errno    => 458513437,
+                    Errstr   => "my hovercraft is full of eels",
+                    FlatHash => $flathash_noneset,
+                }, "custom string set");
+                $! = 0 if $reset_zero;
+            }
         }
     }
 }
@@ -90,6 +118,7 @@ sub explore_system_errors {
             no warnings;
             setsockopt(3,3,3,3) and die "setsockopt failed to fail";
         },
+        sub { no warnings; $! = "9999 is the error code" }, # native $! will see 9999, so must I.
         sub { $! = 3148753 },
     );
 

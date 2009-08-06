@@ -1,5 +1,5 @@
   use Errno qw/ENOENT/;
-  use [% Package %];
+  use Errno::AnyString;
 
   $! = "--my hovercraft is full of eels";
   my $s = "$!"; # $s now contains "my hovercraft is full of eels"

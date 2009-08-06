@@ -1,4 +1,4 @@
-# [ % Package %] 0.01 t/basic.t
+# Errno::AnyString 0.02 t/basic.t
 # Test basic usage
 
 use strict;
