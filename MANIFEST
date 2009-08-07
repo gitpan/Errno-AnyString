@@ -14,5 +14,16 @@ t/in-pm-files-euse.t
 t/in-pm-files-impl.t
 t/in-pm-files-none.t
 t/in-pm-files-use.t
+t/interop-goaway-after-2.t
+t/interop-goaway-after.t
+t/interop-goaway-before-2.t
+t/interop-goaway-before.t
+t/interop-real-d.t
+t/interop-real-dl.t
+t/interop-real-l.t
+t/interop-real-ld.t
+t/interop-real-n.t
+t/ThingThatDisablesIt.pm
+t/ThingThatUsesIt.pm
 Makefile.PL
 META.yml

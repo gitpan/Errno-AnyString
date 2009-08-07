@@ -1,4 +1,4 @@
-# Errno::AnyString 0.03 t/basic.t
+# Errno::AnyString 0.04 t/basic.t
 # Test basic usage
 
 use strict;

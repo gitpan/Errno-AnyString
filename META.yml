@@ -1,6 +1,6 @@
 ---
 name: Errno-AnyString
-version: 0.03
+version: 0.04
 author:
   - 'Dave Taylor <dave.taylor.cpan@gmail.com>'
 abstract: put arbitrary strings in $!
@@ -11,18 +11,19 @@ requires:
   Carp: 0
   Exporter: 0
   Scalar::Util: 0
+  perl: 5.006
 build_requires:
   English: 0
   Errno: 0
   ExtUtils::CBuilder: 0
-  File::Slurp: 0
   Module::Build: 0
+  Scalar::Util: 0
   Test::More: 0
   Test::NoWarnings: 0
 provides:
   Errno::AnyString:
     file: lib/Errno/AnyString.pm
-    version: 0.03
+    version: 0.04
 generated_by: Module::Build version 0.280801
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

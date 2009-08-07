@@ -1,4 +1,4 @@
-# Errno::AnyString 0.03 t/in-pm-files-none.t
+# Errno::AnyString 0.04 t/in-pm-files-none.t
 # Check that the effects of loading Errno::AnyString materialise in other
 # already-loaded modules.
 

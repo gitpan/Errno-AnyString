@@ -1,3 +1,10 @@
+"Errno::AnyString" allows you to place an arbitrary error message in the
+special $! variable, without disrupting $!'s ability to pick up the result
+of the next system call that sets "errno".
+
+It is useful if you are writing code that reports errors by setting $!, and
+none of the standard system error messages fit.
+
   use Errno qw/EIO/;
   use Errno::AnyString qw/custom_errstr/;
 

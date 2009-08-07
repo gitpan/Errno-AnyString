@@ -1,3 +1,4 @@
+use 5.006;
 use strict;
 use warnings;
 use Module::Build;
@@ -8,6 +9,7 @@ my $builder = Module::Build->new(
     dist_author         => 'Dave Taylor <dave.taylor.cpan@gmail.com>',
     dist_version_from   => 'lib/Errno/AnyString.pm',
     requires => {
+        'perl'         => 5.006,
         'Scalar::Util' => 0,
         'Exporter'     => 0,
         'Carp'         => 0,
@@ -16,8 +18,8 @@ my $builder = Module::Build->new(
         'English'            => 0,
         'Errno'              => 0,
         'ExtUtils::CBuilder' => 0,
-        'File::Slurp'        => 0,
         'Module::Build'      => 0,
+        'Scalar::Util'       => 0,
         'Test::More'         => 0,
         'Test::NoWarnings'   => 0,
     },

@@ -1,4 +1,4 @@
-# Errno::AnyString 0.03 t/compat.t
+# Errno::AnyString 0.04 t/compat.t
 # Test compatibility with traditional $! behavior
 
 use strict;
@@ -7,13 +7,14 @@ use warnings;
 use Test::More;
 use Test::NoWarnings;
 
+use Scalar::Util qw/dualvar/;
 use Errno ':POSIX';
 
 our @system_errors = explore_system_errors();
 our $flathash_noneset = $system_errors[-1]{FlatHash};
 
 my $tests_per_errno_ok = 5 + @system_errors;
-my $errno_ok_calls = 2 * 2 * (3 * @system_errors * 7 + 1);
+my $errno_ok_calls = 2 * 2 * (3 * @system_errors * 8 + 1);
 plan tests => $errno_ok_calls * $tests_per_errno_ok + 1;
 
 our $errno_ok_start_with_numeric;
@@ -56,6 +57,12 @@ foreach my $testtype (qw/baseline compat compat2/) {
                     $! = "$errno things are currently on fire";
                 }
                 errno_ok( $system_errors[$i], "$testtype set errno $name silly" );
+                $! = 0 if $reset_zero;
+
+                # Native $! will ignore the pv if the sv contains a number, so do I
+                # unless my magic errno value is used.
+                $! = dualvar $errno, "123456";
+                errno_ok( $system_errors[$i], "$testtype set errno $name dualvar" );
                 $! = 0 if $reset_zero;
 
                 if ($sym) {
@@ -119,6 +126,7 @@ sub explore_system_errors {
             setsockopt(3,3,3,3) and die "setsockopt failed to fail";
         },
         sub { no warnings; $! = "9999 is the error code" }, # native $! will see 9999, so must I.
+        sub { no warnings; $! = "this is the error code" }, # native $! will see 0, so must I.
         sub { $! = 3148753 },
     );
 
