@@ -1,4 +1,4 @@
-# Errno::AnyString 0.04 t/interop-real-d.t
+# Errno::AnyString 0.05 t/interop-real-d.t
 # Test the inter-operation interface: get real $! after disable without load
 
 use strict;

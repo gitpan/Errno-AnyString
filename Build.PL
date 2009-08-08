@@ -15,6 +15,7 @@ my $builder = Module::Build->new(
         'Carp'         => 0,
     },
     build_requires => {
+        'Config'             => 0,
         'English'            => 0,
         'Errno'              => 0,
         'ExtUtils::CBuilder' => 0,

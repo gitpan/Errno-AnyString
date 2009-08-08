@@ -1,5 +1,10 @@
 Revision history for Errno::AnyString
 
+0.05    2009-08-08
+        Some POD improvements.
+        Better handle the case where the string part of a saved $! value is lost.
+        A few more tests.
+
 0.04    2009-08-07
         Added documentation of the internals.
         Added an inter-operation interface.

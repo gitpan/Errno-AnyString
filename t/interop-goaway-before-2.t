@@ -1,4 +1,4 @@
-# Errno::AnyString 0.04 t/interop-goaway-before-2.t
+# Errno::AnyString 0.05 t/interop-goaway-before-2.t
 # Test the inter-operation interface: disabling package before it has been loaded
 
 use strict;

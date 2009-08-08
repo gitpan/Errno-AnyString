@@ -25,5 +25,6 @@ t/interop-real-ld.t
 t/interop-real-n.t
 t/ThingThatDisablesIt.pm
 t/ThingThatUsesIt.pm
+t/threads.t
 Makefile.PL
 META.yml

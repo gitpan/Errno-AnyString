@@ -1,4 +1,4 @@
-# Errno::AnyString 0.04 t/interop-goaway-after.t
+# Errno::AnyString 0.05 t/interop-goaway-after.t
 # Test the inter-operation interface: disabling package after it has been loaded
 
 use strict;

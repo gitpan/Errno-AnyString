@@ -8,11 +8,11 @@ Errno::AnyString - put arbitrary strings in $!
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -88,6 +88,8 @@ This code stores a value in C<$!>, which triggers some magic that converts the v
   $! = "You broke it";
   # gives an "Argument isn't numeric" warning and sets errno to 0
 
+See L<perlvar/ERRNO>.
+
 =head2 DESIGN GOALS
 
 This module makes a global change to Perl's behavior when it is loaded, by interfering with the magical properties of C<$!>. The primary design goal is compatibility. Any code that works without C<Errno::AnyString> loaded should work just the same with C<Errno::AnyString> loaded. Module authors should be able to be confident that pulling in C<Errno::AnyString> to allow them to put arbitrary strings in C<$!> is very unlikely to break anything that might ever be used in conjunction with their module.
@@ -148,13 +150,19 @@ sub STORE {
     my $numval;
     { no warnings ; $numval = 0 + $_[0] };
     if ($numval == ERRSTR_SET) {
-        # Either the dualvar return value of custom_errstr(), or a previously
-        # saved $! value with a custom error string in its pv slot. In either
-        # case, the string value holds the custom error string.
-        $self->{StrVal} = "$_[0]";
-    } else {
-        # A regular $!=EIO type store.
-        delete $self->{StrVal};
+        if ($_[0] eq ERRSTR_SET and defined $self->{StrVal}) {
+            # ERRSTR_SET in both string and number contexts, and a custom
+            # error string has previously been set. This is probably a saved
+            # errno value that has been held in numeric-only storage, causing
+            # the custom error string to be lost. The best I can do is to
+            # re-activate the most recently set custom error string by
+            # leaving $self->{StrVal} as it is.
+        } else {
+            # Either the dualvar return value of custom_errstr(), or a previously
+            # saved $! value with a custom error string in its pv slot. In either
+            # case, the string value holds the custom error string.
+            $self->{StrVal} = "$_[0]";
+        }
     }
     $Errno = $_[0];
 }
@@ -199,7 +207,7 @@ sub FETCH {
 
 =head2 INTER-OPERATION
 
-Other modules that make changes to the way C<$!> works should use the following methods only to interact with C<Errno::AnyString>. These will always work, even if the underlying mechanism changes.
+Other modules that make changes to the way C<$!> works should use the following methods only to interact with C<Errno::AnyString>. These should always work, even if the underlying mechanism changes.
 
 To undo the changes to C<$!> if they are already in place (and to prevent the changes if C<Errno::AnyString> is loaded later):
 
@@ -240,11 +248,27 @@ Dave Taylor, C<< <dave.taylor.cpan at gmail.com> >>
 
 =head1 BUGS AND LIMITATIONS
 
+=head2 C LEVEL STRERROR CALLS
+
 If C level code attempts to get a textual error message based on C<errno> while a custom error string is set, it will get something like the following, depending on the platform:
 
   Unknown error 458513437
 
-If you're reading this page because something broke and spat out the above error message and you googled for it, please get in touch with me and I'll try to help.
+=head2 PURE NUMERIC RESTORE
+
+If the string part of a saved C<$!> value is lost, then restoring that value to C<$!> restores the most recently set custom error string, which is not necessarily the custom error string that was set when the C<$!> value was saved.
+
+  $! = custom_errstr "String 1";
+  my $saved_errno = 0 + $!;
+
+  $! = custom_errstr "String 2";
+
+  $! = $saved_errno;
+  print "$!\n"; # prints String 2
+
+Note that the Perl code that saved the error number had to go out of its way to discard the string part of C<$!>, so I think this combination is fairly unlikely in practice.
+
+=head2 OTHER BUGS
 
 Please report any other bugs or feature requests to C<bug-errno-anystring at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Errno::AnyString>.  I will be notified, and then you'll
@@ -280,7 +304,7 @@ L<http://search.cpan.org/dist/Errno::AnyString>
 
 =head1 SEE ALSO
 
-L<Errno>, L<perltie>
+L<Errno>, L<perlvar/ERRNO>, L<Scalar::Util>, L<perlguts>
 
 =head1 COPYRIGHT & LICENSE
 

@@ -1,4 +1,4 @@
-# Errno::AnyString 0.04 t/compat.t
+# Errno::AnyString 0.05 t/compat.t
 # Test compatibility with traditional $! behavior
 
 use strict;
