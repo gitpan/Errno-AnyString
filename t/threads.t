@@ -1,4 +1,4 @@
-# Errno::AnyString 0.05 t/threads.t
+# Errno::AnyString 0.50 t/threads.t
 # Check that Errno::AnyString does the right thing under a threaded Perl
 
 use strict;
@@ -8,12 +8,12 @@ use Test::More;
 BEGIN {
     use Config;
     plan skip_all => 'ithreads required' unless $Config{useithreads};
-    plan tests => 8;
+    plan tests => 11;
 }
 use Test::NoWarnings;
 
 use threads;
-use Errno::AnyString qw/custom_errstr ERRSTR_SET/;
+use Errno::AnyString qw/custom_errstr register_errstr CUSTOM_ERRSTR_ERRNO/;
 
 my $badthread = threads->create(\&thread_try_to_cause_problems);
 
@@ -24,7 +24,7 @@ my $badthread = threads->create(\&thread_try_to_cause_problems);
 
     $! = custom_errstr "test message";
     select undef, undef, undef, .3;
-    is 0+$!, ERRSTR_SET, "per-thread errno";
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "per-thread errno";
     is "$!", "test message", "per-thread custom errstr";
 
     my $saved_errno = $!;
@@ -33,6 +33,18 @@ my $badthread = threads->create(\&thread_try_to_cause_problems);
     $! = $saved_errno;
     select undef, undef, undef, .3;
     is "$!", "test message", "custom errstr restore theadsafe";
+
+    $! = register_errstr "reg test message";
+    select undef, undef, undef, .3;
+    is "$!", "reg test message", "per-thread registered errstr";
+
+    my $regsave = 0 + $!;
+    $! = 1235;
+    $! = register_errstr "aksjfdhakdsfh";
+    $! = register_errstr "foo-aksjfdhakdsfh";
+    $! = $regsave;
+    select undef, undef, undef, .3;
+    is "$!", "reg test message", "registered errstr restore theadsafe";
 
     $! = custom_errstr "test message 2";
     my $saved_errno_numeric = 0 + $!;
@@ -46,8 +58,13 @@ my $badthread = threads->create(\&thread_try_to_cause_problems);
         return { Error => $! };
     })->join;
     is "$result->{Error}", "message from another thread", "cross-thread errstr passing";
-    is 0+$result->{Error}, ERRSTR_SET,                    "cross-thread errno passing";
+    is 0+$result->{Error}, CUSTOM_ERRSTR_ERRNO,           "cross-thread errno passing";
 
+    my $regresult = threads->create(sub {
+        $! = register_errstr "reg message from another thread";
+        return { Error => $! };
+    })->join;
+    is "$regresult->{Error}", "reg message from another thread", "cross-thread reg errstr passing";
 }
 
 $badthread->kill('KILL')->join;
@@ -55,9 +72,8 @@ $badthread->kill('KILL')->join;
 sub thread_try_to_cause_problems {
     $SIG{'KILL'} = sub { threads->exit(); };
 
-    my $i = 0;
-    for (1 .. 1000) {
-        $! = custom_errstr "qwerty " . ++$i;
+    for my $i (1 .. 1000) {
+        $! = custom_errstr "qwerty $i";
         select undef, undef, undef, .01;
 
         $! = 1234;

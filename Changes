@@ -1,5 +1,9 @@
 Revision history for Errno::AnyString
 
+0.50    2009-08-14
+        Added a way to permanently tie new strings to error numbers.
+        Replaced the underlying mechanism with a better one.
+
 0.05    2009-08-08
         Some POD improvements.
         Better handle the case where the string part of a saved $! value is lost.

@@ -8,11 +8,11 @@ Errno::AnyString - put arbitrary strings in $!
 
 =head1 VERSION
 
-Version 0.05
+Version 0.50
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.50';
 
 =head1 SYNOPSIS
 
@@ -37,62 +37,41 @@ It is useful if you are writing code that reports errors by setting C<$!>, and n
   $! = $saved_errno;
   print "$!\n"; # prints My hovercraft is full of eels
 
+You can also set the error strings for particular error numbers, for the lifetime of the Perl interpreter:
 
-=head1 DESCRIPTION
+  use Errno::AnyString qw/register_errstr/;
 
-If C<Errno::AnyString> is loaded, C<$!> behaves as normal unless a custom error string has been set with C<custom_errstr>. If a custom error string is set, it will be returned when C<$!> is evaluated as a string, and 458513437 will be returned when C<$!> is evaluated as a number, see C<ERRSTR_SET> below.
+  register_errstr "Wetware failure", 339864;
 
-=head1 EXPORTS
+  $! = 339864;
+  print "$!\n"; # prints Wetware failure
 
-Nothing is exported by default. The following are available for export.
 
-=head2 custom_errstr ( ERROR_STRING )
 
-Returns a value which will set the custom error string when assigned to C<$!>
+=head1 BACKGROUND
 
-=head2 ERRSTR_SET
+Perl's special C<$!> variable provides access to  C<errno>, the "error number", which is an integer variable used by C library functions to record what went wrong when they fail. See L<perlvar/ERRNO> and L<Errno>.
 
-C<ERRSTR_SET> is a numeric constant with the value 458513437. This is the value that will be obtained when C<$!> is evaluated in a numeric context while a custom error string is set.
+There is a fixed error message for each C<errno> value in use, and a C library function to translate C<errno> values into error messages. The magical C<$!> variable always holds the current value of C<errno> if you use it in a numeric context, and the corresponding error message if you use it in a string context.
 
-=head1 INTERNALS
+  open my $fh, "<", "/no/such/file"; # the failing open sets errno to 2
+  my $errno = $! + 0;  # $errno now contains 2
+  my $err = "$!";      # $err now contains "No such file or directory"
 
-=head2 BACKGROUND
+You can also assign a number to C<$!>, to set the value of C<errno>. An C<errno> value of 22 means "invalid argument", so:
 
-Perl scalars can hold both a string and a number, at the same time. Normally these are different representations of the same thing, for example a scalar might have 123 in its number slot and "123" in its string slot. However, it is possible to put completely unrelated things in the string and number slots of a scalar. L<Scalar::Util/dualvar> allows you to do this from within Perl code:
+  $! = 22;
+  $errno = $! + 0;  # $errno now contains 22
+  $err = "$!";      # $errstr now contains "Invalid argument"
 
-  use Scalar::Util qw/dualvar/;
-
-  my $foo = dualvar 10, "Hello";
-  print "$foo\n";               # prints Hello
-  print 0+$foo, "\n";           # prints 10
-
-  # The dual values are preserved when scalars are copied around:
-  my $bar = $foo;
-  my %hash = ( foo => $bar );
-  my @array = ( $hash{foo} );
-  print "$array[0]\n";          # prints Hello
-  print 0+$array[0], "\n";      # prints 10
-
-At the C level, there is a global integer variable called C<errno>, the "error number". Many library functions set this value when they fail, to indicate what went wrong. There is a library function to translate C<errno> values into error message strings such as C<No such file or directory>, C<Permission denied>, etc. Perl's special C<$!> variable gives access to C<errno> from within Perl code. It uses the dual value property of scalars to return both the C<errno> value and the corresponding error message. For example:
-
-  open my $fh, "<", "/there/is/no/such/file" or die "open: $!";
-
-Here Perl calls a C library function to try to open the file. Within the C library, the operation fails and C<errno> is set to the value that indicates no such file or directory (2 on my system). The library function returns a value that indicates failure, which causes Perl's open() to return false. The code above then reads the C<$!> variable. The read triggers some magic, which copies C<errno> into C<$!>'s number slot , looks up the error message for error number 2, and sets C<$!>'s string value to "No such file or directory". The value of C<$!> is then used in a string, so the number value of 2 is ignored and the string value of "No such file or directory" is incorporated into the die message.
-
-Perl also allows you to assign a number to C<$!>, to set C<errno>:
-
-  $! = 2;
-
-This code stores a value in C<$!>, which triggers some magic that converts the value to an integer if necessary and then copies the value to C<errno>. Since C<errno> is an integer, you can't put an error message of your own into C<$!>. If you try, Perl will convert your message string to an integer as best it can, and store that in C<errno>.
+What you can't do however is assign a string of your own choice to C<$!>. If you try, Perl just converts your string to an integer as best it can and puts that in C<errno>.
 
   $! = "You broke it";
   # gives an "Argument isn't numeric" warning and sets errno to 0
 
-See L<perlvar/ERRNO>.
+=head1 DESCRIPTION
 
-=head2 DESIGN GOALS
-
-This module makes a global change to Perl's behavior when it is loaded, by interfering with the magical properties of C<$!>. The primary design goal is compatibility. Any code that works without C<Errno::AnyString> loaded should work just the same with C<Errno::AnyString> loaded. Module authors should be able to be confident that pulling in C<Errno::AnyString> to allow them to put arbitrary strings in C<$!> is very unlikely to break anything that might ever be used in conjunction with their module.
+C<Errno::AnyString> allows you to set the error message strings that correspond to particular C<errno> values. It makes a change to the C<$!> magic so that the correct string is returned when C<errno> takes a value for which a string has been registered. The change to C<$!> is global and lasts until the Perl interpreter exits.
 
 =cut
 
@@ -104,143 +83,130 @@ require XSLoader;
 XSLoader::load('Errno::AnyString', $VERSION);
 
 our @ISA = qw/Exporter/;
-our @EXPORT_OK = qw/custom_errstr ERRSTR_SET/;
+our @EXPORT_OK = qw/custom_errstr register_errstr CUSTOM_ERRSTR_ERRNO/;
 
-# A value for errno that nothing else is likely to set.
-sub ERRSTR_SET() { 458513437; }
+our (%Errno2Errstr, %_string2errno);
 
-sub TIESCALAR {
-    my $class = shift;
+Errno::AnyString::_install_my_magic($!);
 
-    return bless {}, $class;
-}
+=head1 EXPORTS
 
-sub UNTIE {}
+Nothing is exported by default. The following are available for export.
 
-=head2 IMPLEMENTATION
+=head2 CUSTOM_ERRSTR_ERRNO
 
-This module works by removing Perl's magic from C<$!>, and making it into a tied scalar. The magic that would normally be on C<$!> is put on another variable, which the tied scalar uses to access C<errno>.
+A constant with the value 458513437. This is the C<errno> value used by this module to indicate that a custom error string set with custom_errstr() is active. This value was chosen at random, to avoid picking an C<errno> value that something else uses.
 
 =cut
 
-our ($Errno, $_init_done);
+sub CUSTOM_ERRSTR_ERRNO () { return 458513437; }
 
-unless ($_init_done) {
-    # Make a new variable with $! magic
-    Errno::AnyString::_set_errno_magic($Errno);
+our $_next_registered_errno = CUSTOM_ERRSTR_ERRNO() + 1;
 
-    unless ($Errno::AnyString::do_not_init) {
-        # Replace $!'s magic
-        Errno::AnyString::_clear_errno_magic($!);
-        tie $!, __PACKAGE__;
-    }
+=head2 custom_errstr ( ERROR_STRING )
 
-    $_init_done = 1;
-}
+Returns a value which will set the specified custom error string when assigned to C<$!>. 
 
-=pod
+The returned value is actually a dual valued scalar with C<CUSTOM_ERRSTR_ERRNO> as its numeric value and the specified error string as its string value. It's not just magical variables like C<$!> that can hold a number and a string at the same time, ordinary Perl scalars can do it as well. See L<Scalar::Util/dualvar>.
 
-When a scalar is assigned to the tied C<$!>, its numeric value is inspected. If it's equal to ERRSTR_SET then the string value is stashed away as the custom error string, replacing any previous custom error string. In any case, C<errno> is set to the numeric value of the scalar.
+With C<Errno::AnyString> loaded, the C<$!> magic responds specially to a scalar with a numeric value of CUSTOM_ERRSTR_ERRNO being assigned to C<$!>: the string value of the scalar gets recorded as the registered string for C<errno> value CUSTOM_ERRSTR_ERRNO, replacing any previous registered string for that value.
 
-=cut
+This way of setting the custom error string was chosen because it works well with code that saves and restores the value of C<$!>.
 
-sub STORE {
-    my $self = shift;
-
-    my $numval;
-    { no warnings ; $numval = 0 + $_[0] };
-    if ($numval == ERRSTR_SET) {
-        if ($_[0] eq ERRSTR_SET and defined $self->{StrVal}) {
-            # ERRSTR_SET in both string and number contexts, and a custom
-            # error string has previously been set. This is probably a saved
-            # errno value that has been held in numeric-only storage, causing
-            # the custom error string to be lost. The best I can do is to
-            # re-activate the most recently set custom error string by
-            # leaving $self->{StrVal} as it is.
-        } else {
-            # Either the dualvar return value of custom_errstr(), or a previously
-            # saved $! value with a custom error string in its pv slot. In either
-            # case, the string value holds the custom error string.
-            $self->{StrVal} = "$_[0]";
-        }
-    }
-    $Errno = $_[0];
-}
-
-=pod
-
-The custom_errstr() function returns a scalar with ERRSTR_SET in the number slot and the specified error message in the string slot. Hence assigning the return value of custom_errstr() to C<$!> sets C<errno> to ERRSTR_SET and overwrites the stashed custom error string.
-
-=cut
-
-sub custom_errstr ($) {
-    return dualvar ERRSTR_SET, $_[0];
-}
-
-=pod
-
-This mechanism for setting the custom error string was chosen because it works correctly with code that saves and later restores the value of C<$!>.
+  $! = custom_errstr "Test string";
 
   my $saved_errno = $!;
   do_other_things();
   $! = $saved_errno;
 
-This code works as expected under C<Errno::AnyString>, even if a custom error string is set, and even if code called from do_other_things() sets other custom error strings. The first line saves both the numeric C<errno> value and the error string (which will be either one of the standard system error message or a custom error string) in C<$saved_errno>. The final line restores the saved C<errno> value, and if that value is ERRSTR_SET it also restores the stashed custom error string.
+  print "$!\n"; # prints Test string
 
-=pod
+When C<$!> is copied to C<$saved_errno>, C<$saved_errno> becomes dual valued with a number value of CUSTOM_ERRSTR_ERRNO and a string value of "Test string". When C<$saved_errno> gets copied back to C<$!> at the end, the number value of CUSTOM_ERRSTR_ERRNO triggers the modified C<$!> magic to register the string value of "Test string" as the custom error string for CUSTOM_ERRSTR_ERRNO.
 
-When the tied C<$!> is read, the numeric value of the returned scalar is fetched from C<errno>. If it's equal to ERRSTR_SET then the stashed custom error string is returned in the string slot, otherwise the system error message corresponding to C<errno> is returned.
+This is important because code called from within do_other_things() might itself use custom_errstr() to set custom error strings, overwriting the registered error string of "Test string". Since C<$saved_errno> saves the error message string as well as the C<errno> value, the C<$!> magic can put the correct string back in place when the C<$saved_errno> value is restored.
 
 =cut
 
-sub FETCH {
-    my $self = shift;
-
-    if (defined $self->{StrVal} and $Errno == ERRSTR_SET) {
-        return dualvar ERRSTR_SET, $self->{StrVal};
-    } else {
-        return dualvar $Errno, $Errno;
-    }
+sub custom_errstr ($) {
+    return dualvar CUSTOM_ERRSTR_ERRNO, "$_[0]";
 }
 
-=pod
+=head2 register_errstr ( ERROR_STRING [,ERRNO_VALUE] )
+
+register_errstr() can be used in a similar way to custom_errstr():
+
+  $! = register_errstr "An error string";
+
+The difference is that register_errstr() permanently (i.e. for the lifetime of the Perl interpreter) assigns an C<errno> value to that error string. The error string is stored away, and will be used as the string value of C<$!> any time that C<errno> value is set in future. By default, register_errstr() picks a large C<errno> value that it has not yet assigned to any other string. 
+
+If you call register_errstr() repeatedly with the same error string, it will notice and use the same C<errno> value each time. That means it's safe to do something like:
+
+  $! = register_errstr "Too many foos defined";
+
+in code that could be called a large number of times, and register_errstr() will store only one copy of the string and use up only one C<errno> value.
+
+You can specify the C<errno> value to use as a second parameter to register_errstr(), for example:
+
+  $! = register_errstr "my error string", 999999;
+
+This sets the error string for C<errno> value 999999 (replacing any previously set error string for 999999) and assigns it to C<$!>. You can also call register_errstr() simply to register a bunch of new error codes, without assigning the return value to C<$!> each time:
+
+  register_errstr "Invalid foodb file",      -20000;
+  register_errstr "Invalid foodb parameter", -20001;
+  register_errstr "foodb out of key slots",  -20002;
+
+  # ...
+
+  $! = -20001;
+  print "$!\n"; # prints Invalid foodb parameter
+
+It is also possible to use register_errstr() to replace the standard system error messages. For example, to replace the "Permission denied" message;
+
+  use Errno qw/EACCES/;
+  register_errstr "I'm sorry, Dave. I'm afraid I can't do that", EACCES;
+
+  open my $fh, ">/no_permission_to_write_here";
+  print "$!\n"; prints "I'm sorry, Dave. I'm afraid I can't do that"
+
+This is not something I'd recommend, as it's likely to cause confusion. In general, when specifying the C<errno> value to register_errstr() one should take care to avoid values that are likely to be used for any other purpose.
+
+Internally, the error strings registered by register_errstr() are kept in the C<%Errno::AnyString::Errno2Errstr> hash. You shouldn't go poking around in this hash yourself, but by localising it you can limit the scope of a register_errstr() registration:
+  
+  {
+      local %Errno::AnyString::Errno2Errstr = %Errno::AnyString::Errno2Errstr;
+
+      register_errstr "I'm sorry, Dave. I'm afraid I can't do that", EACCES;
+
+      # here you have a silly error message in place of "Permission denied"
+  }
+  # here sanity is restored
+
+=cut
+
+sub register_errstr ($;$) {
+    my ($str, $num) = @_;
+
+    unless (defined $num) {
+        $num = $_string2errno{$str};
+        unless (defined $num) {
+            $num = $_next_registered_errno++;
+            $_string2errno{$str} = $num;
+        }
+    }
+    $Errno2Errstr{$num} = "$str";
+
+    return dualvar $num, $str;
+}
 
 =head2 INTER-OPERATION
 
-Other modules that make changes to the way C<$!> works should use the following methods only to interact with C<Errno::AnyString>. These should always work, even if the underlying mechanism changes.
+This section is aimed at the authors of other modules that alter C<$!>'s behaviour, as a guide to ensuring clean inter-operation between Errno::AnyString and your module.
 
-To undo the changes to C<$!> if they are already in place (and to prevent the changes if C<Errno::AnyString> is loaded later):
+Errno::AnyString works by adding two instances of uvar magic to C<$!>, one at the head of the list and one at the tail. It does not modify or remove any existing magic from C<$!>. It should inter-operate cleanly with anything else that adds more magic to C<$!>, so long magic is added in a way that preserves existing uvar magic.
 
-  $Errno::AnyString::do_not_init = 1;
-  if (exists &Errno::AnyString::go_away) {
-      &Errno::AnyString::go_away;
-  }
+Emptying the C<%Errno::AnyString::Errno2Errstr> hash effectively turns off this module's interference with C<$!>, so you can get a "real" C<$!> value with:
 
-=cut
-
-sub go_away {
-    if ($_init_done) {
-        if (tied $! and ref tied $! eq __PACKAGE__) {
-            untie $!;
-            Errno::AnyString::_set_errno_magic($!);
-        }
-    }
-    $Errno::AnyString::do_not_init = 1;
-}
-
-=pod
-
-If you disable C<Errno::AnyString> in this way, you become responsible for ensuring that the right thing happens when an SV holding a C<Errno::AnyString> custom error string is assigned to C<$!>. A custom error string SV will have the numeric value 458513437, and its string value will hold the error string.
-
-If C<Errno::AnyString> has been loaded, then a reference to the equivalent of the normal Perl C<$!> will be returned by C<&Errno::AnyString::real_errno>. To get a reference to the normal C<$!> whether or not C<Errno::AnyString> is loaded:
-
-  my $eref = exists &Errno::AnyString::real_errno ? &Errno::AnyString::real_errno : \$!;
-
-=cut
-
-sub real_errno {
-    return \$Errno;
-}
+  my $e = do { local %Errno::AnyString::Errno2Errstr ; $! };
 
 =head1 AUTHOR
 
@@ -256,7 +222,7 @@ If C level code attempts to get a textual error message based on C<errno> while 
 
 =head2 PURE NUMERIC RESTORE
 
-If the string part of a saved C<$!> value is lost, then restoring that value to C<$!> restores the most recently set custom error string, which is not necessarily the custom error string that was set when the C<$!> value was saved.
+If the string part of a saved custom_errstr() C<$!> value is lost, then restoring that value to C<$!> restores the string most recently set with custom_errstr(), which is not necessarily the string that was set when the C<$!> value was saved.
 
   $! = custom_errstr "String 1";
   my $saved_errno = 0 + $!;
@@ -267,6 +233,14 @@ If the string part of a saved C<$!> value is lost, then restoring that value to 
   print "$!\n"; # prints String 2
 
 Note that the Perl code that saved the error number had to go out of its way to discard the string part of C<$!>, so I think this combination is fairly unlikely in practice.
+
+Error strings set with register_errstr() are not effected by this issue, since each gets its own unique C<errno> value. For this reason, register_errstr() should be used in preference to custom_errstr() if you have a small number of fixed error strings:
+
+  $! = register_errstr "Attempt to frob without a foo"; # good
+
+However, register_errstr() uses up an C<errno> value and permanently stores the string each time it is called with a string it has not seen before. If your code could generate a large number of different error strings over the lifetime of the Perl interpreter, then using register_errstr() could cost a lot of memory. In such cases, custom_errstr() would be a better choice.
+
+  $! = register_errstr "failed at $line in $file: $why"; # less good 
 
 =head2 OTHER BUGS
 

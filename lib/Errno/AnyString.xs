@@ -2,25 +2,145 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#ifndef PERL_MAGIC_sv
-#   define PERL_MAGIC_sv '\0'
+#ifndef PERL_MAGIC_uvar
+#  define PERL_MAGIC_uvar                'U'
 #endif
+
+#define MY_MAGIC_SIG_INDEX 708736475
+#define MY_MAGIC_ERRNO_VALUE 458513437
+
+static I32
+my_get_fn(pTHX_ IV index, SV* sv)
+{
+    SV *hkey_sv, **h_entry;
+    char *kstr;
+    int was_iok, was_nok;
+    STRLEN klen;
+    HV *errno_hash;
+
+    was_iok = SvIOK(sv);
+    was_nok = SvNOK(sv);
+    if (!was_iok && !was_nok) {
+        /* that's unexpected, native $! magic should have sorted that out */
+        return 0;
+    }
+
+    errno_hash = get_hv("Errno::AnyString::Errno2Errstr", FALSE);
+    if (! errno_hash) {
+        /* can't find the hash, give up */
+        return 0;
+    }
+        
+    /* stringify the number for use as a hash key */
+    hkey_sv = newSViv(SvIV(sv));
+    kstr = SvPV(hkey_sv, klen);
+
+    h_entry = hv_fetch(errno_hash, kstr, klen, 0);
+    if (! h_entry) {
+        /* no custom error string for this errno value */
+        return 0;
+    }
+
+    /* copy the custom error string into the pv slot */
+    sv_setpv(sv, SvPV_nolen(*h_entry));
+
+    /* preserve string/number duality */
+    if (was_iok)
+        SvIOK_on(sv);
+    if (was_nok)
+        SvNOK_on(sv);
+
+    return 0;
+}
+
+static I32
+my_set_fn(pTHX_ IV index, SV* sv)
+{
+    SV *hkey_sv, *hval_sv;
+    char *kstr, *vstr;
+    STRLEN klen, vlen;
+    HV *errno_hash;
+
+    if (SvIOK(sv) && SvPOK(sv) && SvIV(sv) == MY_MAGIC_ERRNO_VALUE) {
+        /* This is a dualvar scalar with the magic errno value in its
+         * number slot. Replace the current %Errno2Errstr entry for the
+         * magic errno value with the string value. */
+
+        errno_hash = get_hv("Errno::AnyString::Errno2Errstr", FALSE);
+        if (! errno_hash) {
+            /* can't find the hash, give up */
+            return 0;
+        }
+        
+        /* stringify the number for use as a hash key */
+        hkey_sv = newSViv(SvIV(sv));
+        kstr = SvPV(hkey_sv, klen);
+
+        /* store the string in a non-dualvar scalar for use as the hash value */
+        vstr = SvPV(sv, vlen);
+        hval_sv = newSVpv(vstr, vlen);
+
+        if (! hv_store(errno_hash, kstr, klen, hval_sv, 0))
+            SvREFCNT_dec(hval_sv);
+        SvREFCNT_dec(hkey_sv);
+    }
+    return 0;
+}
+
+static void
+do_install_magic(SV* sv)
+{
+    struct ufuncs uf;
+
+    uf.uf_val   = &my_get_fn;
+    uf.uf_set   = &my_set_fn;
+    uf.uf_index = MY_MAGIC_SIG_INDEX;
+
+#ifdef sv_magicext
+    sv_magicext(sv, 0, PERL_MAGIC_uvar, &PL_vtbl_uvar, (char*)&uf, sizeof(uf));
+#else
+    sv_magic(sv, 0, PERL_MAGIC_uvar, (char*)&uf, sizeof(uf));
+#endif
+}
 
 MODULE = Errno::AnyString		PACKAGE = Errno::AnyString		
 
 void
-_set_errno_magic(target_sv)
-    SV * target_sv;
+_install_my_magic(sv)
+    SV *sv;
+PROTOTYPE: $
+PREINIT:
+    MAGIC *mg, *lastmg;
+    struct ufuncs uf;
+CODE:
 
-    PROTOTYPE: $
-    CODE:
-        sv_magic(target_sv, target_sv, PERL_MAGIC_sv, "!", 1);
+    if (SvTYPE(sv) >= SVt_PVMG) {
+        for ( mg=SvMAGIC(sv) ; mg ; mg=mg->mg_moremagic ) {
+            if ( mg->mg_type == PERL_MAGIC_uvar && mg->mg_len == sizeof(uf) ) {
+                memcpy( &uf, mg->mg_ptr, sizeof(uf) );
+                if ( uf.uf_index == MY_MAGIC_SIG_INDEX ) {
+                    /* my magic already in place, nothing to do */
+                    return;
+                }
+            }
+        }
+    }
+ 
+    do_install_magic(sv);
+ 
+    /* My get magic needs to run after the native $! get magic, move it 
+      to the tail of the list */
+    mg = SvMAGIC(sv);
+    if (mg && mg->mg_moremagic) {
+        SvMAGIC(sv) = mg->mg_moremagic;
+        for ( lastmg = mg->mg_moremagic ; lastmg->mg_moremagic ; lastmg = lastmg->mg_moremagic )
+            ;
+        lastmg->mg_moremagic = mg;
+        mg->mg_moremagic = NULL;
+    }
 
-void
-_clear_errno_magic(target_sv)
-    SV * target_sv;
-
-    PROTOTYPE: $
-    CODE:
-        sv_unmagic(target_sv, PERL_MAGIC_sv);
+    /* Operations that copy the magic to a new SV (eg "local $!") can reverse
+       the order of the magic linked list. To ensure that my get magic runs
+       after $!'s, need an instance of it at each end of the list. */
+    do_install_magic(sv);
 

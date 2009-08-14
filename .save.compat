@@ -1,4 +1,4 @@
-# Errno::AnyString 0.05 t/compat.t
+# Errno::AnyString 0.50 .save.compat
 # Test compatibility with traditional $! behavior
 
 use strict;
@@ -13,9 +13,9 @@ use Errno ':POSIX';
 our @system_errors = explore_system_errors();
 our $flathash_noneset = $system_errors[-1]{FlatHash};
 
-my $tests_per_errno_ok = 5 + @system_errors;
-my $errno_ok_calls = 2 * 2 * (3 * @system_errors * 8 + 1);
-plan tests => $errno_ok_calls * $tests_per_errno_ok + 1;
+my $tests_per_errno_ok = 6 + @system_errors;
+my $errno_ok_calls = 2 * 2 * (3 * @system_errors * 9 + 1);
+plan tests => $errno_ok_calls * $tests_per_errno_ok + 3 + 1;
 
 our $errno_ok_start_with_numeric;
 
@@ -23,6 +23,8 @@ foreach my $testtype (qw/baseline compat compat2/) {
     if ($testtype eq 'compat') {
         eval 'use Errno::AnyString qw/custom_errstr/'; die $@ if $@;
     }
+    $! = 74;
+    my $copied_errno = $!;
     foreach my $reset_zero (0, 1) {
         foreach $errno_ok_start_with_numeric (0, 1) {
             foreach my $i (0 .. $#system_errors) {
@@ -32,6 +34,12 @@ foreach my $testtype (qw/baseline compat compat2/) {
                 $system_errors[$i]{Setter}->();
                 errno_ok( $system_errors[$i], "$testtype setter $name" );
                 $! = 0 if $reset_zero;
+
+                {
+                    local $!;
+                    $system_errors[$i]{Setter}->();
+                    errno_ok( $system_errors[$i], "$testtype setter $name, local preserves magic" );
+                }
 
                 my $errno = $system_errors[$i]{Errno};
                 $! = $errno;
@@ -87,6 +95,7 @@ foreach my $testtype (qw/baseline compat compat2/) {
             }
         }
     }
+    is 0+$copied_errno, 74, "copying $! does not copy the magic";
 }
 
 ###############################################################################
@@ -95,6 +104,11 @@ sub errno_ok {
     my ($want, $testname) = @_;
 
     $testname .= " $errno_ok_start_with_numeric";
+
+    {
+        local $! = 13;
+        is 0+$!, 13, "$testname localized 13";
+    }
 
     if ($errno_ok_start_with_numeric) {
         is 0+$!, $want->{Errno}, "$testname errno";

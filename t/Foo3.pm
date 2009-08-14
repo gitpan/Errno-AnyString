@@ -1,4 +1,4 @@
-# Errno::AnyString 0.05 t/Foo3.pm
+# Errno::AnyString 0.50 t/Foo3.pm
 # Test module for Errno::AnyString
 
 package Foo3;

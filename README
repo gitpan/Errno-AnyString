@@ -22,6 +22,16 @@ none of the standard system error messages fit.
   $! = $saved_errno;
   print "$!\n"; # prints My hovercraft is full of eels
 
+You can also set the error strings for particular error numbers, for the
+lifetime of the Perl interpreter:
+
+  use Errno::AnyString qw/register_errstr/;
+
+  register_errstr "Wetware failure", 339864;
+
+  $! = 339864;
+  print "$!\n"; # prints Wetware failure
+
 INSTALLATION
 
 To install this module, run the following commands:

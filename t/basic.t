@@ -1,18 +1,18 @@
-# Errno::AnyString 0.05 t/basic.t
+# Errno::AnyString 0.50 t/basic.t
 # Test basic usage
 
 use strict;
 use warnings;
 
-use Test::More tests => 9;
+use Test::More tests => 13;
 use Test::NoWarnings;
 
 use Errno ':POSIX';
-use Errno::AnyString qw/custom_errstr ERRSTR_SET/;
+use Errno::AnyString qw/custom_errstr CUSTOM_ERRSTR_ERRNO/;
 
 $! = custom_errstr "an error string";
 is "$!", "an error string", "set string worked";
-is 0+$!, ERRSTR_SET, "$! returned ERRSTR_SET in number context";
+is 0+$!, CUSTOM_ERRSTR_ERRNO, "$! returned CUSTOM_ERRSTR_ERRNO in number context";
 
 # basic saved errno
 {
@@ -24,8 +24,28 @@ is 0+$!, ERRSTR_SET, "$! returned ERRSTR_SET in number context";
     $! = ENOENT;
 
     $! = $saved_errno;
-    is 0+$!, ERRSTR_SET, "saved errno number restored";
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "saved errno number restored";
     is "$!", "keep this error message", "saved errno custom string restored";
+}
+
+# saved errno via local
+{
+    $! = custom_errstr "keep this error message too";
+
+    {
+        local $!;
+
+        $! = custom_errstr "foo23";
+        is 0+$!, CUSTOM_ERRSTR_ERRNO, "local errno number installed";
+        is "$!", "foo23", "local errstr installed";
+        $! = custom_errstr "bar";
+        $! = ENOENT;
+
+        { local $! = 123 }
+    }
+
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "saved errno number restored";
+    is "$!", "keep this error message too", "saved errno custom string restored";
 }
 
 # saved errno with the dualvar value copied around
@@ -40,7 +60,7 @@ is 0+$!, ERRSTR_SET, "$! returned ERRSTR_SET in number context";
     $! = ENOENT;
 
     $! = $b->[1]{foo};
-    is 0+$!, ERRSTR_SET, "copyaround errno number restored";
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "copyaround errno number restored";
     is "$!", "qwerty", "copyaround errno custom string restored";
 }
 
@@ -54,7 +74,7 @@ is 0+$!, ERRSTR_SET, "$! returned ERRSTR_SET in number context";
     $! = ENOENT;
 
     $! = $a;
-    is 0+$!, ERRSTR_SET, "numeric saved errno number restored";
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "numeric saved errno number restored";
     is "$!", "qwerty123", "numeric saved errno custom string restored";
 }
 
