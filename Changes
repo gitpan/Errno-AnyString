@@ -1,5 +1,11 @@
 Revision history for Errno::AnyString
 
+0.51    2009-08-16
+        Fixed failing tests under 5.10.1-RC1
+        Dealt with tainted error strings.
+        Auto-generate test files at packaging time, rather than build time.
+        Fixed a couple of POD typos.
+
 0.50    2009-08-14
         Added a way to permanently tie new strings to error numbers.
         Replaced the underlying mechanism with a better one.

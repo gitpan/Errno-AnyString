@@ -14,13 +14,16 @@ my_get_fn(pTHX_ IV index, SV* sv)
 {
     SV *hkey_sv, **h_entry;
     char *kstr;
-    int was_iok, was_nok;
+    int was_iok, was_iokp, was_nok, was_nokp;
     STRLEN klen;
     HV *errno_hash;
+    IV num;
 
-    was_iok = SvIOK(sv);
-    was_nok = SvNOK(sv);
-    if (!was_iok && !was_nok) {
+    was_iokp = SvIOKp(sv);
+    was_nokp = SvNOKp(sv);
+    was_iok  = SvIOK(sv);
+    was_nok  = SvNOK(sv);
+    if (!was_iokp && !was_nokp) {
         /* that's unexpected, native $! magic should have sorted that out */
         return 0;
     }
@@ -32,7 +35,8 @@ my_get_fn(pTHX_ IV index, SV* sv)
     }
         
     /* stringify the number for use as a hash key */
-    hkey_sv = newSViv(SvIV(sv));
+    num = (was_iokp ? SvIVX(sv) : SvNVX(sv));
+    hkey_sv = newSViv(num);
     kstr = SvPV(hkey_sv, klen);
 
     h_entry = hv_fetch(errno_hash, kstr, klen, 0);
@@ -45,10 +49,11 @@ my_get_fn(pTHX_ IV index, SV* sv)
     sv_setpv(sv, SvPV_nolen(*h_entry));
 
     /* preserve string/number duality */
-    if (was_iok)
-        SvIOK_on(sv);
-    if (was_nok)
-        SvNOK_on(sv);
+    if (was_iok) SvIOK_on(sv);
+    if (was_nok) SvNOK_on(sv);
+    if (was_iokp) SvIOKp_on(sv);
+    if (was_nokp) SvNOKp_on(sv);
+    SvPOK_on(sv);
 
     return 0;
 }
@@ -57,11 +62,15 @@ static I32
 my_set_fn(pTHX_ IV index, SV* sv)
 {
     SV *hkey_sv, *hval_sv;
-    char *kstr, *vstr;
-    STRLEN klen, vlen;
+    char *kstr;
+    STRLEN klen;
     HV *errno_hash;
 
-    if (SvIOK(sv) && SvPOK(sv) && SvIV(sv) == MY_MAGIC_ERRNO_VALUE) {
+    if ((SvIOKp(sv) || SvNOKp(sv)) && SvPOKp(sv)) {
+        IV num = (SvIOKp(sv) ? SvIVX(sv) : SvNVX(sv));
+
+        if ( num != MY_MAGIC_ERRNO_VALUE )
+            return 0;
         /* This is a dualvar scalar with the magic errno value in its
          * number slot. Replace the current %Errno2Errstr entry for the
          * magic errno value with the string value. */
@@ -73,12 +82,11 @@ my_set_fn(pTHX_ IV index, SV* sv)
         }
         
         /* stringify the number for use as a hash key */
-        hkey_sv = newSViv(SvIV(sv));
+        hkey_sv = newSViv(num);
         kstr = SvPV(hkey_sv, klen);
 
         /* store the string in a non-dualvar scalar for use as the hash value */
-        vstr = SvPV(sv, vlen);
-        hval_sv = newSVpv(vstr, vlen);
+        hval_sv = newSVpvn(SvPVX(sv), SvCUR(sv));
 
         if (! hv_store(errno_hash, kstr, klen, hval_sv, 0))
             SvREFCNT_dec(hval_sv);

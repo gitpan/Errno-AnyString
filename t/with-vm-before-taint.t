@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/with-vm.ttmpl
@@ -22,7 +23,7 @@ BEGIN {
     eval 'use Variable::Magic qw/wizard cast/';
     plan skip_all => 'Variable::Magic required' if $@;
 
-    plan tests => 3 + 2*@norm + 1;
+    plan tests => 3 + 2*@norm + 2;
 }
 use Test::NoWarnings;
 
@@ -84,3 +85,7 @@ SKIP: {
     }
 }
  
+
+use Test::Taint;
+taint_checking_ok;
+

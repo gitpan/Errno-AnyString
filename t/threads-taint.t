@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/threads.ttmpl
@@ -15,7 +16,7 @@ use Test::More;
 BEGIN {
     use Config;
     plan skip_all => 'ithreads required' unless $Config{useithreads};
-    plan tests => 11;
+    plan tests => 12;
 }
 use Test::NoWarnings;
 
@@ -90,4 +91,8 @@ sub thread_try_to_cause_problems {
         select undef, undef, undef, .01;
     }
 }
+
+
+use Test::Taint;
+taint_checking_ok;
 

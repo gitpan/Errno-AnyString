@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/with-vm.ttmpl
@@ -6,11 +7,12 @@
 # t/build-test-scripts
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Inter-operation with Variable::Magic, V::M loaded before Errno::AnyString
+# Inter-operation with Variable::Magic, V::M loaded after Errno::AnyString
 
 use strict;
 use warnings;
 
+use Errno::AnyString qw/custom_errstr register_errstr/;
 
 use lib 't';
 use NormalErrnoOperation;
@@ -22,7 +24,7 @@ BEGIN {
     eval 'use Variable::Magic qw/wizard cast/';
     plan skip_all => 'Variable::Magic required' if $@;
 
-    plan tests => 3 + 2*@norm + 1;
+    plan tests => 3 + 2*@norm + 2;
 }
 use Test::NoWarnings;
 
@@ -52,7 +54,6 @@ BEGIN {
     }
 };
 
-use Errno::AnyString qw/custom_errstr register_errstr/;
 
 local $!;
 
@@ -63,15 +64,15 @@ $! = 0;
 is $setlog, "set to 15;set to 0;", "V::M set hook working";
 
 
-$! = custom_errstr "it's on fire";
-is "$!", "it's on fire", "custom overrides V::M get hook";
-
-register_errstr "out of fruit", 999999;
-$! = 999999;
-is "$!", "out of fruit", "register overrides V::M get hook";
-
 SKIP: {
-    skip "local does not reverse magic list", 2*@norm unless $local_reverses_magic;
+    skip "local does not reverse magic list", 2*@norm+2 unless $local_reverses_magic;
+
+    $! = custom_errstr "it's on fire";
+    is "$!", "Dude, it's on fire!", "custom cooperates with V::M get hook";
+
+    register_errstr "out of fruit", 999999;
+    $! = 999999;
+    is "$!", "Dude, out of fruit!", "register cooperates with V::M get hook";
 
 
     foreach my $n (@norm) {
@@ -84,3 +85,7 @@ SKIP: {
     }
 }
  
+
+use Test::Taint;
+taint_checking_ok;
+

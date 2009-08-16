@@ -25,6 +25,7 @@ my $builder = Module::Build->new(
         'Test::Exception'    => 0,
         'Test::More'         => 0,
         'Test::NoWarnings'   => 0,
+        'Test::Taint'        => 0,
     },
     add_to_cleanup      => [ 'Errno::AnyString-*' ],
     create_makefile_pl => 'small',

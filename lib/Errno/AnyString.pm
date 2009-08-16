@@ -8,11 +8,11 @@ Errno::AnyString - put arbitrary strings in $!
 
 =head1 VERSION
 
-Version 0.50
+Version 0.51
 
 =cut
 
-our $VERSION = '0.50';
+our $VERSION = '0.51';
 
 =head1 SYNOPSIS
 
@@ -62,7 +62,7 @@ You can also assign a number to C<$!>, to set the value of C<errno>. An C<errno>
 
   $! = 22;
   $errno = $! + 0;  # $errno now contains 22
-  $err = "$!";      # $errstr now contains "Invalid argument"
+  $err = "$!";      # $err now contains "Invalid argument"
 
 What you can't do however is assign a string of your own choice to C<$!>. If you try, Perl just converts your string to an integer as best it can and puts that in C<errno>.
 
@@ -77,7 +77,7 @@ C<Errno::AnyString> allows you to set the error message strings that correspond 
 
 use Exporter;
 use Carp;
-use Scalar::Util qw/dualvar/;
+use Scalar::Util qw/dualvar tainted/;
 
 require XSLoader;
 XSLoader::load('Errno::AnyString', $VERSION);
@@ -128,6 +128,8 @@ This is important because code called from within do_other_things() might itself
 =cut
 
 sub custom_errstr ($) {
+    tainted $_[0] and croak "Tainted error string used with Errno::AnyString";
+
     return dualvar CUSTOM_ERRSTR_ERRNO, "$_[0]";
 }
 
@@ -186,6 +188,8 @@ Internally, the error strings registered by register_errstr() are kept in the C<
 sub register_errstr ($;$) {
     my ($str, $num) = @_;
 
+    tainted $str and croak "Tainted error string used with Errno::AnyString";
+
     unless (defined $num) {
         $num = $_string2errno{$str};
         unless (defined $num) {
@@ -198,7 +202,7 @@ sub register_errstr ($;$) {
     return dualvar $num, $str;
 }
 
-=head2 INTER-OPERATION
+=head1 INTER-OPERATION
 
 This section is aimed at the authors of other modules that alter C<$!>'s behaviour, as a guide to ensuring clean inter-operation between Errno::AnyString and your module.
 
@@ -241,6 +245,12 @@ Error strings set with register_errstr() are not effected by this issue, since e
 However, register_errstr() uses up an C<errno> value and permanently stores the string each time it is called with a string it has not seen before. If your code could generate a large number of different error strings over the lifetime of the Perl interpreter, then using register_errstr() could cost a lot of memory. In such cases, custom_errstr() would be a better choice.
 
   $! = register_errstr "failed at $line in $file: $why"; # less good 
+
+=head2 TAINT MODE
+
+I'm currently unable to find a good way to propagate the taintedness of custom error strings through C<$!>, due to an interaction between taint magic, C<$!>'s dualvar behaviour and the SvPOK flag in some Perl versions. If Perl is in taint mode then passing a tainted error string to custom_errstr() or register_errstr() will cause an immediate croak with the message:
+
+  Tainted error string used with Errno::AnyString
 
 =head2 OTHER BUGS
 

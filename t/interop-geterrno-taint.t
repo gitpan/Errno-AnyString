@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/interop-geterrno.ttmpl
@@ -11,7 +12,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::NoWarnings;
 
 use Errno ':POSIX';
@@ -31,4 +32,8 @@ my $e = do { local %Errno::AnyString::Errno2Errstr ; $! };
 
 is 0+$e, $errno, "real errno";
 is "$e", $real_errstr, "real errstr";
+
+
+use Test::Taint;
+taint_checking_ok;
 

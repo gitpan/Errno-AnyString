@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/basic.ttmpl
@@ -11,7 +12,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Test::NoWarnings;
 
 use Errno ':POSIX';
@@ -91,4 +92,8 @@ is 0+$!, CUSTOM_ERRSTR_ERRNO, "\$! returned CUSTOM_ERRSTR_ERRNO in number contex
     is 0+$!, CUSTOM_ERRSTR_ERRNO, "numeric saved errno number restored";
     is "$!", "qwerty123", "numeric saved errno custom string restored";
 }
+
+
+use Test::Taint;
+taint_checking_ok;
 
