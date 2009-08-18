@@ -3,14 +3,14 @@
 use strict;
 use warnings;
 
-<<< IF vary!!loadwhen == 'after' ->>>
-use Errno::AnyString qw/custom_errstr register_errstr/;
-<<< END ->>>
-
 use lib 't';
 use NormalErrnoOperation;
 our @norm;
 BEGIN { @norm = NormalErrnoOperation->new }
+
+<<< IF loadwhen == 'after' ->>>
+use Errno::AnyString qw/custom_errstr register_errstr/;
+<<< END ->>>
 
 use Test::More;
 BEGIN {
@@ -47,7 +47,7 @@ BEGIN {
     }
 };
 
-<<< IF vary!!loadwhen == 'before' ->>>
+<<< IF loadwhen == 'before' ->>>
 use Errno::AnyString qw/custom_errstr register_errstr/;
 <<< END ->>>
 
@@ -59,7 +59,7 @@ $! = 0;
 
 is $setlog, "set to 15;set to 0;", "V::M set hook working";
 
-<<< IF vary!!loadwhen == 'before' ->>>
+<<< IF loadwhen == 'before' ->>>
 
 $! = custom_errstr "it's on fire";
 is "$!", "it's on fire", "custom overrides V::M get hook";

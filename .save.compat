@@ -1,4 +1,4 @@
-# Errno::AnyString 0.51 .save.compat
+# Errno::AnyString 1.00 .save.compat
 # Test compatibility with traditional $! behavior
 
 use strict;

@@ -11,11 +11,11 @@
 use strict;
 use warnings;
 
-
 use lib 't';
 use NormalErrnoOperation;
 our @norm;
 BEGIN { @norm = NormalErrnoOperation->new }
+
 
 use Test::More;
 BEGIN {

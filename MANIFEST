@@ -39,6 +39,7 @@ t/in-pm-files.ttmpl
 t/interop-geterrno-taint.t
 t/interop-geterrno.t
 t/interop-geterrno.ttmpl
+t/MockBDB.pm
 t/NormalErrnoOperation.pm
 t/register-taint.t
 t/register.t
@@ -49,6 +50,9 @@ t/ThingThatUsesIt.pm
 t/threads-taint.t
 t/threads.t
 t/threads.ttmpl
+t/with-mockbdb-after.t
+t/with-mockbdb-before.t
+t/with-mockbdb.ttmpl
 t/with-vm-after-taint.t
 t/with-vm-after.t
 t/with-vm-before-taint.t

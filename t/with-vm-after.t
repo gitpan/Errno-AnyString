@@ -11,12 +11,12 @@
 use strict;
 use warnings;
 
-use Errno::AnyString qw/custom_errstr register_errstr/;
-
 use lib 't';
 use NormalErrnoOperation;
 our @norm;
 BEGIN { @norm = NormalErrnoOperation->new }
+
+use Errno::AnyString qw/custom_errstr register_errstr/;
 
 use Test::More;
 BEGIN {

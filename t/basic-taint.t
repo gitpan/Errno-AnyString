@@ -12,7 +12,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 18;
+use Test::More tests => 21;
 use Test::NoWarnings;
 
 use Errno ':POSIX';
@@ -91,6 +91,16 @@ is 0+$!, CUSTOM_ERRSTR_ERRNO, "\$! returned CUSTOM_ERRSTR_ERRNO in number contex
     $! = $a;
     is 0+$!, CUSTOM_ERRSTR_ERRNO, "numeric saved errno number restored";
     is "$!", "qwerty123", "numeric saved errno custom string restored";
+}
+
+# assigning undef to $!
+{
+    $! = undef;
+    is 0+$!, 0, "undef is errno 0";
+
+    $! = custom_errstr "foo";
+    is 0+$!, CUSTOM_ERRSTR_ERRNO, "ce after undef num";
+    is "$!", "foo", "ce after undef string";
 }
 
 

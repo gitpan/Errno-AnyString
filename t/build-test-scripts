@@ -12,9 +12,9 @@ build-test-scripts - rebuild t/*.t from t/*.ttmpl
 
 =head1 DESCRIPTION
 
-When run from the root of the Errno::AnyString distribution, this script rebuilds the test files in F<t/> from test template files in the same directory. 
+When run from the root of the Errno::AnyString distribution, this script rebuilds some of the test files in F<t/> from test template files in the same directory. 
 
-Each test template gives rise to several test files, with a test file generated for each possible combination of values for the C<vary> directives in the template.
+Each test template gives rise to one or more test files, with a test file generated for each possible combination of values for the C<vary> directives in the template.
 
 =cut
 
@@ -46,11 +46,11 @@ while ( my $f = readdir $dirhandle ) {
 EOF
     my $input = read_file $src_filename;
     $input =~ s/^((?:#!.*\n)?)/$1 . $auto_warning/e;
-    build_test_scripts($base_test_name, $input);
+    build_test_scripts($base_test_name, $input, {});
 }
 
 sub build_test_scripts {
-    my ($test_name, $input) = @_;
+    my ($test_name, $input, $vars) = @_;
 
     my $vary;
     my @range;
@@ -61,7 +61,7 @@ sub build_test_scripts {
         $vary = $1;
         @range = ('', $vary);
     } else {
-        output_test_script($test_name, $input);
+        output_test_script($test_name, $input, $vars);
         return;
     }
 
@@ -72,14 +72,14 @@ sub build_test_scripts {
             $copy = "#!perl -T\n" . $copy . "\nuse Test::Taint;\ntaint_checking_ok;\n\n";
         }
         my $test_name_addition = length $value ? "-$value" : "";
-        build_test_scripts($test_name.$test_name_addition, $copy);
+        build_test_scripts($test_name.$test_name_addition, $copy, { %$vars, $vary => $value });
     }
 }
 
 sub output_test_script {
-    my ($test_name, $input) = @_;
+    my ($test_name, $input, $vars) = @_;
 
     my $outfile = File::Spec->catfile("t", "$test_name.t");
-    $tt->process(\$input, {}, $outfile) or die "Template $outfile: ".$tt->error;
+    $tt->process(\$input, $vars, $outfile) or die "Template $outfile: ".$tt->error;
 }
 

@@ -1,5 +1,9 @@
 Revision history for Errno::AnyString
 
+1.00    2009-08-18
+        No-longer alpha (meaning I won't lightly change the interface)
+        A little more testage
+
 0.51    2009-08-16
         Fixed failing tests under 5.10.1-RC1
         Dealt with tainted error strings.

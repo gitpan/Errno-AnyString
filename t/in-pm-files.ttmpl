@@ -4,11 +4,11 @@
 use strict;
 use warnings;
 
-<<< IF vary!!loadhow == 'use' ->>>
+<<< IF loadhow == 'use' ->>>
 use Errno;
-<<< ELSIF vary!!loadhow == 'evaluse' ->>>
+<<< ELSIF loadhow == 'evaluse' ->>>
 eval "use Errno"; die $@ if $@;
-<<< ELSIF vary!!loadhow == 'implicit' ->>>
+<<< ELSIF loadhow == 'implicit' ->>>
 my @implicitly_load_Errno_pm = keys(%!);
 <<< END ->>>
 
