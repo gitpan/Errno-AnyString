@@ -8,12 +8,11 @@
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Check that the effects of loading Errno::AnyString materialize in other
-# already-loaded modules. Errno.pm loading = evaluse
+# already-loaded modules. Errno.pm loading = none
 
 use strict;
 use warnings;
 
-eval "use Errno"; die $@ if $@;
 
 use Test::More;
 use Test::NoWarnings;
@@ -28,7 +27,7 @@ use Errno::AnyString qw/CUSTOM_ERRSTR_ERRNO custom_errstr/;
 my @pkgs = map {"Foo$_"} (1 .. 4);
 plan tests => @pkgs*6 + 2;
 
-
+local $!;
 
 foreach my $pkg (@pkgs) {
     my $x = $pkg->new;

@@ -30,7 +30,7 @@ BEGIN {
 use Test::NoWarnings;
 
 
-
+local $!;
 
 # Errno::AnyString features
 $! = custom_errstr "custom 1";

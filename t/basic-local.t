@@ -17,7 +17,7 @@ use Test::NoWarnings;
 use Errno ':POSIX';
 use Errno::AnyString qw/custom_errstr CUSTOM_ERRSTR_ERRNO/;
 
-
+local $!;
 
 $! = custom_errstr "an error string";
 is "$!", "an error string", "set string worked";

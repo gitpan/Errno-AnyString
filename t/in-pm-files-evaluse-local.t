@@ -1,4 +1,3 @@
-#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/in-pm-files.ttmpl
@@ -26,9 +25,9 @@ use Foo4;
 use Errno::AnyString qw/CUSTOM_ERRSTR_ERRNO custom_errstr/;
 
 my @pkgs = map {"Foo$_"} (1 .. 4);
-plan tests => @pkgs*6 + 2;
+plan tests => @pkgs*6 + 1;
 
-
+local $!;
 
 foreach my $pkg (@pkgs) {
     my $x = $pkg->new;
@@ -47,8 +46,4 @@ foreach my $pkg (@pkgs) {
     is $x->errstr, "string1", "$pkg special errstr restored";
     is $x->errno, CUSTOM_ERRSTR_ERRNO, "$pkg special errno restored";
 }
-
-
-use Test::Taint;
-taint_checking_ok;
 

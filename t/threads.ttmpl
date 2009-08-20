@@ -7,6 +7,10 @@ use Test::More;
 BEGIN {
     use Config;
     plan skip_all => 'ithreads required' unless $Config{useithreads};
+
+    eval 'use threads';
+    plan skip_all => 'threads.pm required' if $@;
+
     plan tests => <<< vary!!taint ? 12 : 11 >>>;
 }
 use Test::NoWarnings;

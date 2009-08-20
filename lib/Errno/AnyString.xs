@@ -5,12 +5,15 @@
 #ifndef PERL_MAGIC_uvar
 #  define PERL_MAGIC_uvar                'U'
 #endif
+#ifndef PERL_MG_UFUNC
+#  define PERL_MG_UFUNC(name,ix,sv) I32 name(IV ix, SV *sv)
+#endif
 
 #define MY_MAGIC_SIG_INDEX 708736475
 #define MY_MAGIC_ERRNO_VALUE 458513437
 
-static I32
-my_get_fn(pTHX_ IV index, SV* sv)
+
+static PERL_MG_UFUNC(my_get_fn, index, sv)
 {
     SV *hkey_sv, **h_entry;
     char *kstr;
@@ -58,8 +61,7 @@ my_get_fn(pTHX_ IV index, SV* sv)
     return 0;
 }
 
-static I32
-my_set_fn(pTHX_ IV index, SV* sv)
+static PERL_MG_UFUNC(my_set_fn, index, sv)
 {
     SV *hkey_sv, *hval_sv;
     char *kstr;

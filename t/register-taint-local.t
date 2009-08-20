@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/register.ttmpl
@@ -11,14 +12,14 @@
 use strict;
 use warnings;
 
-use Test::More tests => 23 + 1;
+use Test::More tests => 23 + 2;
 use Test::NoWarnings;
 
 use lib 't';
 use NormalErrnoOperation;
 use Errno::AnyString qw/register_errstr custom_errstr/;
 
-
+local $!;
 
 $! = register_errstr "first registered error string";
 my $first_errno = 0+$!;
@@ -166,4 +167,8 @@ is "$!", "first registered error string", "set string worked";
 $! = $first_errno;
 is "$!", "first registered error string", "longterm numeric restore worked";
 
+
+
+use Test::Taint;
+taint_checking_ok;
 

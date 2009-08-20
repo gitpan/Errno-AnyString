@@ -15,6 +15,10 @@ use Test::More;
 BEGIN {
     use Config;
     plan skip_all => 'ithreads required' unless $Config{useithreads};
+
+    eval 'use threads';
+    plan skip_all => 'threads.pm required' if $@;
+
     plan tests => 11;
 }
 use Test::NoWarnings;

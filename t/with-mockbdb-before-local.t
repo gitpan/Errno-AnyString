@@ -6,7 +6,7 @@
 # t/build-test-scripts
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Inter-operation with BDB, BDB loaded after Errno::AnyString
+# Inter-operation with BDB, BDB loaded before Errno::AnyString
 # Actually tests inter-operation with t/MockBDB.pm, which uses Inline::C to load up a
 # copy of BDB's xs code to patch $!.
 
@@ -18,7 +18,6 @@ use NormalErrnoOperation;
 our @norm;
 BEGIN { @norm = NormalErrnoOperation->new }
 
-use Errno::AnyString qw/custom_errstr register_errstr CUSTOM_ERRSTR_ERRNO/;
 
 use Test::More;
 BEGIN {
@@ -29,8 +28,9 @@ BEGIN {
 }
 use Test::NoWarnings;
 
+use Errno::AnyString qw/custom_errstr register_errstr CUSTOM_ERRSTR_ERRNO/;
 
-
+local $!;
 
 # Errno::AnyString features
 $! = custom_errstr "custom 1";

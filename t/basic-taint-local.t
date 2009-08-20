@@ -1,3 +1,4 @@
+#!perl -T
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # This file was automatically built from t/basic.ttmpl
@@ -11,13 +12,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::NoWarnings;
 
 use Errno ':POSIX';
 use Errno::AnyString qw/custom_errstr CUSTOM_ERRSTR_ERRNO/;
 
-
+local $!;
 
 $! = custom_errstr "an error string";
 is "$!", "an error string", "set string worked";
@@ -103,4 +104,8 @@ is 0+$!, CUSTOM_ERRSTR_ERRNO, "\$! returned CUSTOM_ERRSTR_ERRNO in number contex
     is 0+$!, CUSTOM_ERRSTR_ERRNO, "ce after undef num";
     is "$!", "foo", "ce after undef string";
 }
+
+
+use Test::Taint;
+taint_checking_ok;
 

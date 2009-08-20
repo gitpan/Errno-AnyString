@@ -1,5 +1,9 @@
 Revision history for Errno::AnyString
 
+1.01    2009-08-20
+        Fixed failure on pre-5.7 threaded Perls (gotta love those cpan testers)
+        Added a "local $!" variation to some of the quicker tests
+
 1.00    2009-08-18
         No-longer alpha (meaning I won't lightly change the interface)
         A little more testage

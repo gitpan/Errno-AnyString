@@ -19,7 +19,7 @@ use Test::Taint;
 
 use Errno::AnyString qw/custom_errstr register_errstr/;
 
-
+local $!;
 
 my @set_tainted_errstr = (
     ['custom direct',    sub { $! = custom_errstr $_ }],

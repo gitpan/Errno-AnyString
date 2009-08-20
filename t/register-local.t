@@ -18,7 +18,7 @@ use lib 't';
 use NormalErrnoOperation;
 use Errno::AnyString qw/register_errstr custom_errstr/;
 
-
+local $!;
 
 $! = register_errstr "first registered error string";
 my $first_errno = 0+$!;

@@ -1,5 +1,5 @@
 #!perl -T
-# Check that tainting is propagated
+# Check that tainting is handled correctly
 
 use strict;
 use warnings;
@@ -10,6 +10,8 @@ use Test::Exception;
 use Test::Taint;
 
 use Errno::AnyString qw/custom_errstr register_errstr/;
+
+<<< IF vary!!local >>>local $!;<<< END >>>
 
 my @set_tainted_errstr = (
     ['custom direct',    sub { $! = custom_errstr $_ }],
