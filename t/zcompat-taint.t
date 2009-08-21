@@ -16,7 +16,7 @@ use Test::More;
 use Test::NoWarnings;
 
 use Scalar::Util qw/dualvar/;
-use Errno ':POSIX';
+use Errno;
 
 use lib 't';
 use NormalErrnoOperation;
@@ -85,7 +85,7 @@ foreach my $testtype (qw/baseline compat compat2/) {
                 $! = 0 if $reset_zero;
 
                 if ($sym) {
-                    eval "\$! = $sym"; die $@ if $@;
+                    eval "\$! = &Errno::$sym"; die $@ if $@;
                     errno_ok( $system_errors[$i], "$testtype set symbol $name" );
                     $! = 0 if $reset_zero;
                 } else {

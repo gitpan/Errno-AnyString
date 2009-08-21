@@ -1,4 +1,4 @@
-# Errno::AnyString 1.01 t/Foo4.pm
+# Errno::AnyString 1.02 t/Foo4.pm
 # Test module for Errno::AnyString
 # uses a closure to hide away a ref to the real $!
 

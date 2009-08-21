@@ -8,11 +8,11 @@ Errno::AnyString - put arbitrary strings in $!
 
 =head1 VERSION
 
-Version 1.01
+Version 1.02
 
 =cut
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 =head1 SYNOPSIS
 
