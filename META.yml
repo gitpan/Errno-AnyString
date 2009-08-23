@@ -1,6 +1,6 @@
 ---
 name: Errno-AnyString
-version: 1.02
+version: 1.03
 author:
   - 'Dave Taylor <dave.taylor.cpan@gmail.com>'
 abstract: put arbitrary strings in $!
@@ -27,7 +27,7 @@ build_requires:
 provides:
   Errno::AnyString:
     file: lib/Errno/AnyString.pm
-    version: 1.02
+    version: 1.03
 generated_by: Module::Build version 0.280801
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

@@ -70,12 +70,16 @@ my $badthread = threads->create(\&thread_try_to_cause_problems);
     is "$regresult->{Error}", "reg message from another thread", "cross-thread reg errstr passing";
 }
 
-$badthread->kill('KILL')->join;
+# Older versions of threads.pm lack kill, in which case I'll wait for
+# the child to die of old age.
+eval { $badthread->kill('KILL') };
+
+$badthread->join;
 
 sub thread_try_to_cause_problems {
     $SIG{'KILL'} = sub { threads->exit(); };
 
-    for my $i (1 .. 1000) {
+    for my $i (1 .. 200) {
         $! = custom_errstr "qwerty $i";
         select undef, undef, undef, .01;
 

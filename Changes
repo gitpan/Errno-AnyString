@@ -1,5 +1,8 @@
 Revision history for Errno::AnyString
 
+1.03    2009-08-23
+        Fixed failing test with old versions of threads.pm
+
 1.02    2009-08-21
         Fixed test failure under strawberry perl
 
